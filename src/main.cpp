@@ -12,22 +12,20 @@
 #include <IO/System/CommandParser.hpp>
 #include <IO/System/EventLog.hpp>
 #include <IO/System/PrintDebug.hpp>
+#include <exception>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 
-int main(int argc, char** argv)
+static void run(const std::string& path)
 {
 	using namespace sw;
 
-	if (argc != 2)
-	{
-		throw std::runtime_error("Error: No file specified in command line argument");
-	}
-
-	std::ifstream file(argv[1]);
+	std::ifstream file(path);
 	if (!file)
 	{
-		throw std::runtime_error("Error: File not found - " + std::string(argv[1]));
+		throw std::runtime_error("Error: File not found - " + path);
 	}
 
 	// Code for example...
@@ -77,6 +75,25 @@ int main(int argc, char** argv)
 
 	eventLog.log(8, io::UnitAttacked{2, 3, 5, 0});
 	eventLog.log(8, io::UnitDied{3});
+}
+
+int main(int argc, char** argv)
+{
+	if (argc != 2)
+	{
+		std::cerr << "Usage: sw_battle_test <scenario-file>\n";
+		return 1;
+	}
+
+	try
+	{
+		run(argv[1]);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error: " << e.what() << '\n';
+		return 1;
+	}
 
 	return 0;
 }

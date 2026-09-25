@@ -1,5 +1,7 @@
 #include "CommandParser.hpp"
 
+#include <sstream>
+
 namespace sw::io
 {
 	void CommandParser::parse(std::istream& stream)
