@@ -1,5 +1,7 @@
 #include "Scenario.hpp"
 
+#include "Core/EventBus.hpp"
+#include "Core/Simulation.hpp"
 #include "Features/Components/March.hpp"
 #include "Features/Units/Hunter.hpp"
 #include "Features/Units/Swordsman.hpp"
@@ -33,7 +35,7 @@ namespace sw::app
 				_world.emplace(command.width, command.height, _events);
 			});
 
-		// The list of unit types: should add a new unit here
+		// Supported unit types
 		registerUnit(parser, &features::makeSwordsman);
 		registerUnit(parser, &features::makeHunter);
 
@@ -58,6 +60,11 @@ namespace sw::app
 			});
 
 		parser.parse(stream);
+	}
+
+	void Scenario::run()
+	{
+		core::Simulation(getWorld(), _events).run();
 	}
 
 	core::World& Scenario::getWorld()

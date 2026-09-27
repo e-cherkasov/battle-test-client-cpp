@@ -21,6 +21,7 @@ static void run(const std::string& path)
 	core::EventBus events(eventLog);
 	app::Scenario scenario(events);
 	scenario.load(file);
+	scenario.run();
 }
 
 int main(int argc, char** argv)

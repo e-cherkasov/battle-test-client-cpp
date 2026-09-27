@@ -1,0 +1,28 @@
+#pragma once
+
+#include <cassert>
+#include <cstddef>
+#include <random>
+#include <vector>
+
+namespace sw::core
+{
+	class Random
+	{
+	public:
+		Random() :
+				_engine(std::random_device{}())
+		{}
+
+		template <class T>
+		const T& pickOne(const std::vector<T>& items)
+		{
+			assert(!items.empty());
+			std::uniform_int_distribution<size_t> distribution(0, items.size() - 1);
+			return items[distribution(_engine)];
+		}
+
+	private:
+		std::mt19937 _engine;
+	};
+}

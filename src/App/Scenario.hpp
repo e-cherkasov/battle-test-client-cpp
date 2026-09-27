@@ -1,12 +1,15 @@
 #pragma once
 
-#include "Core/EventBus.hpp"
-#include "Core/Node.hpp"
 #include "Core/World.hpp"
 
 #include <iosfwd>
 #include <memory>
 #include <optional>
+
+namespace sw::core
+{
+	class EventBus;
+}
 
 namespace sw::io
 {
@@ -15,13 +18,14 @@ namespace sw::io
 
 namespace sw::app
 {
-	// Binds scenario commands to the world. The world exists only when map exists
+	// Connects scenario commands to the world. The world exists only after CREATE_MAP.
 	class Scenario
 	{
 	public:
 		explicit Scenario(core::EventBus& events);
 
 		void load(std::istream& stream);
+		void run();
 
 	private:
 		template <class TSpawnCommand>

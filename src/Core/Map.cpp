@@ -26,6 +26,12 @@ namespace sw::core
 		_cells[toIndex(position)] = id;
 	}
 
+	void Map::removeUnit(Position position)
+	{
+		assert(contains(position));
+		_cells[toIndex(position)].reset();
+	}
+
 	size_t Map::toIndex(Position position) const
 	{
 		return static_cast<size_t>(position.y) * _width + position.x;

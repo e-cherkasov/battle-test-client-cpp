@@ -18,6 +18,16 @@ namespace sw::core
 			return _hp;
 		}
 
+		bool isAlive() const
+		{
+			return _hp > 0;
+		}
+
+		void takeDamage(uint32_t damage)
+		{
+			_hp -= static_cast<int32_t>(damage);
+		}
+
 	private:
 		int32_t _hp;
 	};

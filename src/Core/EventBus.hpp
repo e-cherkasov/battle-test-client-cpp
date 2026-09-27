@@ -14,6 +14,11 @@ namespace sw::core
 				_log(log)
 		{}
 
+		void nextTick()
+		{
+			++_tick;
+		}
+
 		template <class TEvent>
 		void emit(TEvent&& event)
 		{

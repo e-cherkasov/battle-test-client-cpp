@@ -3,6 +3,8 @@
 #include "Core/Component.hpp"
 #include "Core/Geometry.hpp"
 
+#include <optional>
+
 namespace sw::features
 {
 	struct March : core::Component
@@ -11,6 +13,6 @@ namespace sw::features
 				target(target)
 		{}
 
-		core::Position target;
+		std::optional<core::Position> target;
 	};
 }

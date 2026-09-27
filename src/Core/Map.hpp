@@ -18,6 +18,7 @@ namespace sw::core
 		bool contains(Position position) const;
 		bool isFree(Position position) const;
 		void placeUnit(Position position, UnitId id);
+		void removeUnit(Position position);
 
 	private:
 		size_t toIndex(Position position) const;
