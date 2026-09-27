@@ -34,6 +34,7 @@ namespace sw::core
 			uint32_t maxRange,
 			const std::function<bool(const Node&)>& filter) const;
 
+		bool contains(Position position) const;
 		bool isCellFree(Position position) const;
 
 		void move(Node& node, Position to);

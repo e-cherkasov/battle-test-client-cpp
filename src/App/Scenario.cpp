@@ -10,10 +10,24 @@
 #include "IO/Events/MarchStarted.hpp"
 #include "IO/System/CommandParser.hpp"
 
-#include <cassert>
+#include <iostream>
+#include <string>
 
 namespace sw::app
 {
+	namespace
+	{
+		void skipCommand(const char* command, const std::string& reason)
+		{
+			std::cerr << "Warning: " << command << " skipped: " << reason << '\n';
+		}
+
+		std::string toString(core::Position position)
+		{
+			return "(" + std::to_string(position.x) + ", " + std::to_string(position.y) + ")";
+		}
+	}
+
 	Scenario::Scenario(core::EventBus& events) :
 			_events(events)
 	{}
@@ -21,7 +35,15 @@ namespace sw::app
 	template <class TSpawnCommand>
 	void Scenario::registerUnit(io::CommandParser& parser, std::unique_ptr<core::Node> (*factory)(const TSpawnCommand&))
 	{
-		parser.add<TSpawnCommand>([this, factory](TSpawnCommand command) { getWorld().addChild(factory(command)); });
+		parser.add<TSpawnCommand>(
+			[this, factory](TSpawnCommand command)
+			{
+				auto unit = factory(command);
+				if (canSpawn(TSpawnCommand::Name, *unit))
+				{
+					_world->addChild(std::move(unit));
+				}
+			});
 	}
 
 	void Scenario::load(std::istream& stream)
@@ -31,7 +53,11 @@ namespace sw::app
 		parser.add<io::CreateMap>(
 			[this](io::CreateMap command)
 			{
-				assert(!_world.has_value());
+				if (_world.has_value())
+				{
+					skipCommand(io::CreateMap::Name, "map is already created");
+					return;
+				}
 				_world.emplace(command.width, command.height, _events);
 			});
 
@@ -42,10 +68,25 @@ namespace sw::app
 		parser.add<io::March>(
 			[this](io::March command)
 			{
-				core::Node* unit = getWorld().getChildById(command.unitId);
-				assert(unit != nullptr);
+				if (!hasMap(io::March::Name))
+				{
+					return;
+				}
+
+				core::Node* unit = _world->getChildById(command.unitId);
+				if (unit == nullptr)
+				{
+					skipCommand(io::March::Name, "unknown unit " + std::to_string(command.unitId));
+					return;
+				}
 
 				const core::Position target{command.targetX, command.targetY};
+				if (!_world->contains(target))
+				{
+					skipCommand(io::March::Name, "target " + toString(target) + " is outside the map");
+					return;
+				}
+
 				if (auto* march = unit->getComponent<features::March>())
 				{
 					march->target = target;
@@ -64,12 +105,52 @@ namespace sw::app
 
 	void Scenario::run()
 	{
-		core::Simulation(getWorld(), _events).run();
+		if (!_world.has_value())
+		{
+			std::cerr << "Warning: scenario has no CREATE_MAP\n";
+			return;
+		}
+		core::Simulation(*_world, _events).run();
 	}
 
-	core::World& Scenario::getWorld()
+	bool Scenario::hasMap(const char* command)
 	{
-		assert(_world.has_value());
-		return *_world;
+		if (!_world.has_value())
+		{
+			skipCommand(command, "the scenario must start with CREATE_MAP");
+			return false;
+		}
+		return true;
+	}
+
+	bool Scenario::canSpawn(const char* command, const core::Node& unit)
+	{
+		if (!hasMap(command))
+		{
+			return false;
+		}
+
+		const core::Position position = unit.getPosition();
+		if (_world->getChildById(unit.getId()) != nullptr)
+		{
+			skipCommand(command, "unit " + std::to_string(unit.getId()) + " already exists");
+			return false;
+		}
+		if (!unit.isAlive())
+		{
+			skipCommand(command, "unit " + std::to_string(unit.getId()) + " has no HP");
+			return false;
+		}
+		if (!_world->contains(position))
+		{
+			skipCommand(command, toString(position) + " is outside the map");
+			return false;
+		}
+		if (unit.blocksCell() && !_world->isCellFree(position))
+		{
+			skipCommand(command, toString(position) + " is occupied");
+			return false;
+		}
+		return true;
 	}
 }

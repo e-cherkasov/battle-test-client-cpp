@@ -10,10 +10,10 @@ namespace sw::core
 	{
 	public:
 		explicit Health(uint32_t hp) :
-				_hp(static_cast<int32_t>(hp))
+				_hp(hp)
 		{}
 
-		int32_t getHp() const
+		int64_t getHp() const
 		{
 			return _hp;
 		}
@@ -25,10 +25,10 @@ namespace sw::core
 
 		void takeDamage(uint32_t damage)
 		{
-			_hp -= static_cast<int32_t>(damage);
+			_hp -= damage;
 		}
 
 	private:
-		int32_t _hp;
+		int64_t _hp;
 	};
 }

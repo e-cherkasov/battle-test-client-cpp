@@ -31,7 +31,8 @@ namespace sw::app
 		template <class TSpawnCommand>
 		void registerUnit(io::CommandParser& parser, std::unique_ptr<core::Node> (*factory)(const TSpawnCommand&));
 
-		core::World& getWorld();
+		bool hasMap(const char* command);
+		bool canSpawn(const char* command, const core::Node& unit);
 
 		core::EventBus& _events;
 		std::optional<core::World> _world;

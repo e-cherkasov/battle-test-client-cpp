@@ -64,6 +64,11 @@ namespace sw::core
 		return result;
 	}
 
+	bool World::contains(Position position) const
+	{
+		return _map.contains(position);
+	}
+
 	bool World::isCellFree(Position position) const
 	{
 		return _map.isFree(position);
@@ -91,7 +96,7 @@ namespace sw::core
 		const bool wasAlive = health->isAlive();
 		health->takeDamage(damage);
 
-		const auto targetHp = static_cast<uint32_t>(std::max(health->getHp(), 0));
+		const auto targetHp = static_cast<uint32_t>(std::max<int64_t>(health->getHp(), 0));
 		_events.emit(io::UnitAttacked{attacker.getId(), target.getId(), damage, targetHp});
 
 		// The dead unit keeps its cell until the end of the round, since the task says it disappears next turn
