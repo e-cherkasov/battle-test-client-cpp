@@ -10,6 +10,7 @@
 #include "IO/Events/MarchStarted.hpp"
 #include "IO/System/CommandParser.hpp"
 
+#include <cstdint>
 #include <iostream>
 #include <string>
 
@@ -17,6 +18,8 @@ namespace sw::app
 {
 	namespace
 	{
+		constexpr uint64_t kMaxMapCells = 1000000;
+
 		void skipCommand(const char* command, const std::string& reason)
 		{
 			std::cerr << "Warning: " << command << " skipped: " << reason << '\n';
@@ -56,6 +59,17 @@ namespace sw::app
 				if (_world.has_value())
 				{
 					skipCommand(io::CreateMap::Name, "map is already created");
+					return;
+				}
+				if (command.width == 0 || command.height == 0)
+				{
+					skipCommand(io::CreateMap::Name, "map must have at least one cell");
+					return;
+				}
+				if (uint64_t{command.width} * command.height > kMaxMapCells)
+				{
+					skipCommand(
+						io::CreateMap::Name, "map is too big, at most " + std::to_string(kMaxMapCells) + " cells");
 					return;
 				}
 				_world.emplace(command.width, command.height, _events);
@@ -103,14 +117,14 @@ namespace sw::app
 		parser.parse(stream);
 	}
 
-	void Scenario::run()
+	void Scenario::run(uint32_t seed)
 	{
 		if (!_world.has_value())
 		{
 			std::cerr << "Warning: scenario has no CREATE_MAP\n";
 			return;
 		}
-		core::Simulation(*_world, _events).run();
+		core::Simulation(*_world, _events, seed).run();
 	}
 
 	bool Scenario::hasMap(const char* command)

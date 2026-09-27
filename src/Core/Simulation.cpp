@@ -6,9 +6,10 @@
 
 namespace sw::core
 {
-	Simulation::Simulation(World& world, EventBus& events) :
+	Simulation::Simulation(World& world, EventBus& events, uint32_t seed) :
 			_world(world),
-			_events(events)
+			_events(events),
+			_random(seed)
 	{}
 
 	void Simulation::run()

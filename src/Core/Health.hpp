@@ -23,12 +23,14 @@ namespace sw::core
 			return _hp > 0;
 		}
 
+	private:
+		friend class World;
+
 		void takeDamage(uint32_t damage)
 		{
 			_hp -= damage;
 		}
 
-	private:
 		int64_t _hp;
 	};
 }

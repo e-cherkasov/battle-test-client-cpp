@@ -4,6 +4,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <stdexcept>
 #include <string>
 
@@ -21,7 +22,7 @@ static void run(const std::string& path)
 	core::EventBus events(eventLog);
 	app::Scenario scenario(events);
 	scenario.load(file);
-	scenario.run();
+	scenario.run(std::random_device{}());
 }
 
 int main(int argc, char** argv)

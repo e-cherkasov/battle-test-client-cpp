@@ -1,14 +1,16 @@
 // Each test runs a scenario in the task's command format and checks the printed event log.
-// Scenarios are built so that every attack has a single possible target, which keeps them deterministic.
+// Most scenarios leave a single possible target, so they do not depend on the seed.
+// Random choice itself is checked with fixed seeds.
 
 #include "App/Scenario.hpp"
 #include "Core/EventBus.hpp"
 #include "IO/System/EventLog.hpp"
 
-#include <gtest/gtest.h>
 #include <cstdint>
+#include <gtest/gtest.h>
 #include <iostream>
 #include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -75,7 +77,7 @@ namespace
 		return events;
 	}
 
-	ScenarioResult runScenario(const std::string& commands)
+	ScenarioResult runScenario(const std::string& commands, uint32_t seed = 0)
 	{
 		std::ostringstream log;
 		std::ostringstream warnings;
@@ -87,12 +89,13 @@ namespace
 			sw::app::Scenario scenario(events);
 			std::istringstream input(commands);
 			scenario.load(input);
-			scenario.run();
+			scenario.run(seed);
 		}
 		return {log.str(), warnings.str(), parseLog(log.str())};
 	}
 
-	std::vector<Event> find(const std::vector<Event>& events, const std::string& name, const std::string& key, uint32_t value)
+	std::vector<Event> find(
+		const std::vector<Event>& events, const std::string& name, const std::string& key, uint32_t value)
 	{
 		std::vector<Event> result;
 		for (const auto& event : events)
@@ -211,6 +214,69 @@ TEST(March, StepsDiagonallyEachTurnAndEndsOnArrival)
 	EXPECT_EQ(end[0].get("y"), 2u);
 }
 
+// A marching unit waits instead of stepping into a taken cell, the task does not ask for a detour
+TEST(March, NeverStepsIntoTakenCell)
+{
+	const ScenarioResult result = runScenario(kMap + swordsman(1, 0, 0, 10) + "MARCH 1 2 0\n" + swordsman(2, 1, 0, 10));
+	SCOPED_TRACE(result.log);
+
+	EXPECT_TRUE(movesOf(result.events, 1).empty());
+	EXPECT_TRUE(find(result.events, "MARCH_ENDED", "unitId", 1).empty());
+}
+
+// README, Swordsman: hits one random adjacent unit and deals Strength damage, moves if there is nobody to hit
+TEST(Swordsman, HitsNeighbourAndThenGoesOnMarching)
+{
+	// Unit 2 blocks the way and dies from one hit, unit 3 far away keeps the simulation going
+	const ScenarioResult result = runScenario(
+		kMap + swordsman(1, 0, 0, 10, 5) + "MARCH 1 4 0\n" + swordsman(2, 1, 0, 5) + swordsman(3, 9, 9, 10));
+	SCOPED_TRACE(result.log);
+
+	const auto attacks = attacksBy(result.events, 1);
+	ASSERT_EQ(attacks.size(), 1u);
+	EXPECT_EQ(attacks[0].tick, 2u);
+	EXPECT_EQ(attacks[0].get("targetUnitId"), 2u);
+	EXPECT_EQ(attacks[0].get("damage"), 5u);
+
+	const auto moves = movesOf(result.events, 1);
+	ASSERT_EQ(moves.size(), 4u);
+	EXPECT_EQ(moves[0].tick, 3u);
+	EXPECT_EQ(moves[0].get("x"), 1u);
+
+	const auto end = find(result.events, "MARCH_ENDED", "unitId", 1);
+	ASSERT_EQ(end.size(), 1u);
+	EXPECT_EQ(end[0].get("x"), 4u);
+}
+
+// README, Swordsman: hits one random unit in an adjacent cell
+TEST(Swordsman, PicksTargetAtRandomAmongNeighbours)
+{
+	// Unit 1 stands between units 2 and 3, which do not reach each other
+	const std::string commands = kMap + swordsman(1, 1, 0, 10, 1) + swordsman(2, 0, 0, 3) + swordsman(3, 2, 0, 3);
+
+	std::set<uint32_t> firstTargets;
+	for (uint32_t seed = 0; seed < 20; ++seed)
+	{
+		const ScenarioResult result = runScenario(commands, seed);
+		SCOPED_TRACE("seed " + std::to_string(seed) + "\n" + result.log);
+
+		const auto attacks = attacksBy(result.events, 1);
+		ASSERT_FALSE(attacks.empty());
+		for (const auto& attack : attacks)
+		{
+			EXPECT_TRUE(attack.get("targetUnitId") == 2 || attack.get("targetUnitId") == 3);
+		}
+		firstTargets.insert(attacks[0].get("targetUnitId"));
+	}
+	EXPECT_EQ(firstTargets.size(), 2u);
+}
+
+TEST(Simulation, SameSeedReplaysSameBattle)
+{
+	const std::string commands = kMap + swordsman(1, 1, 0, 10, 1) + swordsman(2, 0, 0, 3) + swordsman(3, 2, 0, 3);
+	EXPECT_EQ(runScenario(commands, 7).log, runScenario(commands, 7).log);
+}
+
 // README, Task: the simulation ends when only one unit is left on the map
 TEST(Simulation, StopsWhenOneUnitIsLeft)
 {
@@ -248,31 +314,48 @@ TEST(Simulation, StopsWhenUnitsCannotHurtEachOther)
 
 TEST(Scenario, SkipsBrokenCommandLinesWithWarningAndRunsTheRest)
 {
-	const ScenarioResult result = runScenario(
-		kMap + "SPAWN_ARCHER 2 1 1 10 5\n" // unknown command
-		+ "SPAWN_SWORDSMAN 3 1 1 10\n"	   // strength is missing
-		+ "SPAWN_SWORDSMAN 4 1 1 abc 1\n"  // hp is not a number
-		+ "SPAWN_SWORDSMAN 5 1 1 -10 1\n"  // hp is negative
-		+ "SPAWN_SWORDSMAN 6 1 1 10 1 7\n" // extra argument
-		+ kHunter + swordsman(7, 2, 0, kHunterAgility));
-	SCOPED_TRACE(result.log);
-
-	EXPECT_NE(result.warnings.find("SPAWN_ARCHER skipped: unknown command"), std::string::npos) << result.warnings;
-	EXPECT_NE(result.warnings.find("missing or invalid strength"), std::string::npos) << result.warnings;
-	EXPECT_NE(result.warnings.find("missing or invalid hp"), std::string::npos) << result.warnings;
-	EXPECT_NE(result.warnings.find("unexpected argument 7"), std::string::npos) << result.warnings;
-	for (uint32_t id = 2; id <= 6; ++id)
+	// Each broken line spawns unit 2 at (1, 1) and must be skipped with its own warning
+	const std::map<std::string, std::string> warningForLine = {
+		{"SPAWN_ARCHER 2 1 1 10 5", "SPAWN_ARCHER skipped: unknown command"},
+		{"SPAWN_SWORDSMAN 2 1 1 10", "SPAWN_SWORDSMAN skipped: missing or invalid strength"},
+		{"SPAWN_SWORDSMAN 2 1 1 abc 1", "SPAWN_SWORDSMAN skipped: missing or invalid hp"},
+		{"SPAWN_SWORDSMAN 2 1 1 -10 1", "SPAWN_SWORDSMAN skipped: missing or invalid hp"},
+		{"SPAWN_SWORDSMAN 2 1 1 10 1 7", "SPAWN_SWORDSMAN skipped: unexpected argument 7"},
+	};
+	for (const auto& [line, warning] : warningForLine)
 	{
-		EXPECT_TRUE(find(result.events, "UNIT_SPAWNED", "unitId", id).empty()) << id;
+		const ScenarioResult result = runScenario(kMap + line + "\n" + kHunter + swordsman(3, 2, 0, kHunterAgility));
+		SCOPED_TRACE(line + "\n" + result.log);
+
+		EXPECT_NE(result.warnings.find(warning), std::string::npos) << result.warnings;
+		EXPECT_TRUE(find(result.events, "UNIT_SPAWNED", "unitId", 2).empty());
+		EXPECT_EQ(find(result.events, "UNIT_DIED", "unitId", 3).size(), 1u);
 	}
-	EXPECT_EQ(find(result.events, "UNIT_DIED", "unitId", 7).size(), 1u);
+}
+
+TEST(Scenario, SkipsMapWithoutCellsOrTooBig)
+{
+	const std::map<std::string, std::string> warningForMap = {
+		{"CREATE_MAP 0 5", "CREATE_MAP skipped: map must have at least one cell"},
+		{"CREATE_MAP 4294967295 4294967295", "CREATE_MAP skipped: map is too big"},
+	};
+	for (const auto& [map, warning] : warningForMap)
+	{
+		const ScenarioResult result = runScenario(map + "\n" + kMap + kHunter + swordsman(2, 2, 0, kHunterAgility));
+		SCOPED_TRACE(map + "\n" + result.log);
+
+		EXPECT_NE(result.warnings.find(warning), std::string::npos) << result.warnings;
+		ASSERT_FALSE(result.events.empty());
+		EXPECT_EQ(result.events[0].name, "MAP_CREATED");
+		EXPECT_EQ(result.events[0].get("width"), 10u);
+	}
 }
 
 TEST(Scenario, SkipsInvalidCommandsWithWarningAndRunsTheRest)
 {
 	const ScenarioResult result = runScenario(
-		kMap + kHunter + swordsman(2, 0, 0, 10) // the cell is taken by the hunter
-		+ "MARCH 2 5 5\n"						  // unit 2 was not spawned
+		kMap + kHunter + swordsman(2, 0, 0, 10)	 // the cell is taken by the hunter
+		+ "MARCH 2 5 5\n"						 // unit 2 was not spawned
 		+ swordsman(3, 2, 0, kHunterAgility));
 	SCOPED_TRACE(result.log);
 
@@ -285,13 +368,14 @@ TEST(Scenario, SkipsInvalidCommandsWithWarningAndRunsTheRest)
 // commands_example.txt and the reference log from the task's main.cpp
 TEST(ExampleScenario, MatchesReferenceLogWhileItFollowsTheRules)
 {
-	const std::string commands = "CREATE_MAP 10 10\n"
-								 "SPAWN_SWORDSMAN 1 0 0 5 2\n"
-								 "SPAWN_HUNTER 2 9 0 10 5 1 4\n"
-								 "MARCH 1 9 0\n"
-								 "MARCH 2 0 0\n"
-								 "SPAWN_SWORDSMAN 3 0 9 10 2\n"
-								 "MARCH 3 0 0\n";
+	const std::string commands
+		= "CREATE_MAP 10 10\n"
+		  "SPAWN_SWORDSMAN 1 0 0 5 2\n"
+		  "SPAWN_HUNTER 2 9 0 10 5 1 4\n"
+		  "MARCH 1 9 0\n"
+		  "MARCH 2 0 0\n"
+		  "SPAWN_SWORDSMAN 3 0 9 10 2\n"
+		  "MARCH 3 0 0\n";
 	// At tick 7 the reference shoots from distance 5 with Range 4, so the comparison stops at tick 6
 	const std::vector<std::string> reference = {
 		"[1] MAP_CREATED width=10 height=10 ",

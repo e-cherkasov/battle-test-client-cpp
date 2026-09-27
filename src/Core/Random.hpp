@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <random>
 #include <vector>
 
@@ -10,8 +11,8 @@ namespace sw::core
 	class Random
 	{
 	public:
-		Random() :
-				_engine(std::random_device{}())
+		explicit Random(uint32_t seed) :
+				_engine(seed)
 		{}
 
 		template <class T>

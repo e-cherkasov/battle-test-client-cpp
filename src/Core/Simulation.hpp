@@ -2,6 +2,8 @@
 
 #include "Random.hpp"
 
+#include <cstdint>
+
 namespace sw::core
 {
 	class EventBus;
@@ -10,7 +12,8 @@ namespace sw::core
 	class Simulation
 	{
 	public:
-		Simulation(World& world, EventBus& events);
+		// The same seed replays the same battle
+		Simulation(World& world, EventBus& events, uint32_t seed);
 
 		void run();
 

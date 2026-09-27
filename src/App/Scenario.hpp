@@ -2,6 +2,7 @@
 
 #include "Core/World.hpp"
 
+#include <cstdint>
 #include <iosfwd>
 #include <memory>
 #include <optional>
@@ -25,7 +26,7 @@ namespace sw::app
 		explicit Scenario(core::EventBus& events);
 
 		void load(std::istream& stream);
-		void run();
+		void run(uint32_t seed);
 
 	private:
 		template <class TSpawnCommand>

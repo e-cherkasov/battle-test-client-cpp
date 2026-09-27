@@ -5,11 +5,16 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(SW_WARNINGS_AS_ERRORS "Treat warnings in the project code as errors" OFF)
+
 function(sw_set_warnings target)
 	if(MSVC)
 		target_compile_options(${target} PRIVATE /W4)
 	else()
 		target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+	endif()
+	if(SW_WARNINGS_AS_ERRORS)
+		set_target_properties(${target} PROPERTIES COMPILE_WARNING_AS_ERROR ON)
 	endif()
 endfunction()
 
