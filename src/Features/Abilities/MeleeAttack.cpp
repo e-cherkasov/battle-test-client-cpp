@@ -1,10 +1,6 @@
 #include "MeleeAttack.hpp"
 
-#include "Core/Node.hpp"
-#include "Core/Random.hpp"
-#include "Core/TurnContext.hpp"
-#include "Core/World.hpp"
-#include "TargetFilters.hpp"
+#include "Attack.hpp"
 
 namespace sw::features
 {
@@ -19,18 +15,6 @@ namespace sw::features
 
 	bool MeleeAttack::tryAct(core::TurnContext& context)
 	{
-		core::Node& self = *getOwner();
-		const auto targets = context.world.findInRange(
-			self.getPosition(),
-			kMeleeRange,
-			kMeleeRange,
-			[&self](const core::Node& target) { return isAttackable(self, target); });
-		if (targets.empty())
-		{
-			return false;
-		}
-
-		context.world.dealDamage(self, *context.random.pickOne(targets), _damage);
-		return true;
+		return attackRandomUnit(context, *getOwner(), kMeleeRange, kMeleeRange, _damage);
 	}
 }
