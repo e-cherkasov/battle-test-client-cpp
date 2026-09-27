@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu gcc
+            os: ubuntu-latest
+            cxx: g++
+            options: -DCMAKE_BUILD_TYPE=Release -DSW_WARNINGS_AS_ERRORS=ON
+          - name: ubuntu clang
+            os: ubuntu-latest
+            cxx: clang++
+            options: -DCMAKE_BUILD_TYPE=Release -DSW_WARNINGS_AS_ERRORS=ON
+          # Debug keeps the asserts that guard the Core invariants
+          - name: ubuntu clang, debug with sanitizers
+            os: ubuntu-latest
+            cxx: clang++
+            options: >-
+              -DCMAKE_BUILD_TYPE=Debug -DSW_WARNINGS_AS_ERRORS=ON
+              "-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=all"
+          - name: macos apple clang
+            os: macos-latest
+            cxx: clang++
+            options: -DCMAKE_BUILD_TYPE=Release -DSW_WARNINGS_AS_ERRORS=ON
+          - name: windows msvc
+            os: windows-latest
+            cxx: ""
+            options: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.cxx }}" ]; then export CXX=${{ matrix.cxx }}; fi
+          cmake -B build -DSW_BUILD_TESTS=ON ${{ matrix.options }}
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Run the scenarios
+        shell: bash
+        run: |
+          exe=build/sw_battle_test
+          if [ -f build/Release/sw_battle_test.exe ]; then exe=build/Release/sw_battle_test.exe; fi
+          for scenario in commands_example.txt scenarios/*.txt; do
+            echo "== $scenario"
+            "$exe" "$scenario"
+          done
