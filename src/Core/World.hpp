@@ -16,7 +16,7 @@ namespace sw::core
 {
 	class EventBus;
 
-	// Owns all units. Only the world changes their state and reports events about it
+	// Owns all units. Units move and hurt each other only through the world, which reports these changes
 	class World
 	{
 	public:
@@ -44,8 +44,6 @@ namespace sw::core
 		size_t getAliveCount() const;
 
 	private:
-		friend class Node;
-
 		void removeChild(Node& node);
 
 		Map _map;

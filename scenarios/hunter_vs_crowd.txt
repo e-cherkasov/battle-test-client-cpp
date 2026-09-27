@@ -1,0 +1,12 @@
+// Four swordsmen close in on a hunter from the corners.
+// The hunter shoots while they approach and switches to melee once one of them is next to it.
+CREATE_MAP 12 12
+SPAWN_HUNTER 1 6 6 30 4 2 5
+SPAWN_SWORDSMAN 2 0 0 8 3
+SPAWN_SWORDSMAN 3 11 0 8 3
+SPAWN_SWORDSMAN 4 0 11 8 3
+SPAWN_SWORDSMAN 5 11 11 8 3
+MARCH 2 6 6
+MARCH 3 6 6
+MARCH 4 6 6
+MARCH 5 6 6

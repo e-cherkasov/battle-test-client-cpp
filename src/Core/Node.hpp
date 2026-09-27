@@ -68,8 +68,7 @@ namespace sw::core
 			return nullptr;
 		}
 
-		// Destroys this node, so do not use it after the call
-		void removeFromParent();
+		void destroy();
 
 		// Plays one turn. Returns true if the node acted
 		bool update(TurnContext& context);
@@ -83,6 +82,7 @@ namespace sw::core
 		std::string _type;
 		Position _position;
 		bool _blocksCell = true;
+		bool _destroyed = false;
 		World* _parent = nullptr;
 		std::vector<std::unique_ptr<Component>> _components;
 	};

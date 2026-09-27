@@ -27,6 +27,12 @@ add_executable(sw_battle_test src/main.cpp)
 target_link_libraries(sw_battle_test PRIVATE sw_core)
 sw_set_warnings(sw_battle_test)
 
+option(SW_BUILD_TESTS "Build the tests" OFF)
+if(SW_BUILD_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
+
 set_target_properties(sw_battle_test PROPERTIES
 	XCODE_GENERATE_SCHEME ON
 	XCODE_SCHEME_ARGUMENTS "${CMAKE_CURRENT_SOURCE_DIR}/commands_example.txt"

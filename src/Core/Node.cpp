@@ -1,7 +1,6 @@
 #include "Node.hpp"
 
 #include "Health.hpp"
-#include "World.hpp"
 
 #include <cassert>
 
@@ -41,14 +40,17 @@ namespace sw::core
 
 	bool Node::isAlive() const
 	{
+		if (_destroyed)
+		{
+			return false;
+		}
 		const auto* health = getComponent<Health>();
 		return health == nullptr || health->isAlive();
 	}
 
-	void Node::removeFromParent()
+	void Node::destroy()
 	{
-		assert(_parent != nullptr);
-		_parent->removeChild(*this);
+		_destroyed = true;
 	}
 
 	bool Node::update(TurnContext& context)

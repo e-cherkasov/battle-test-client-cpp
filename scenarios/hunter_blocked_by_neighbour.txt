@@ -1,0 +1,7 @@
+// The hunter can not shoot while someone stands next to it.
+// It kills the neighbour in melee (Strength) and then shoots the swordsman who marches in (Agility).
+CREATE_MAP 10 10
+SPAWN_HUNTER 1 0 0 10 5 1 4
+SPAWN_SWORDSMAN 2 1 0 2 1
+SPAWN_SWORDSMAN 3 9 0 10 1
+MARCH 3 0 0

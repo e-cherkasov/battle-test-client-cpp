@@ -11,6 +11,11 @@ namespace sw::features
 	bool attackRandomUnit(
 		core::TurnContext& context, core::Node& attacker, uint32_t minRange, uint32_t maxRange, uint32_t damage)
 	{
+		if (damage == 0)
+		{
+			return false;
+		}
+
 		const auto targets = context.world.findInRange(
 			attacker.getPosition(),
 			minRange,

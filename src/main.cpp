@@ -14,7 +14,7 @@ static void run(const std::string& path)
 	std::ifstream file(path);
 	if (!file)
 	{
-		throw std::runtime_error("Error: File not found - " + path);
+		throw std::runtime_error("File not found: " + path);
 	}
 
 	EventLog eventLog;

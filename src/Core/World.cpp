@@ -108,7 +108,7 @@ namespace sw::core
 
 	void World::removeDeadChildren()
 	{
-		// Collect first because removeFromParent erases from the list we iterate
+		// Collect first because removeChild erases from the list we iterate
 		std::vector<Node*> dead;
 		for (const auto& child : _children)
 		{
@@ -119,7 +119,7 @@ namespace sw::core
 		}
 		for (Node* node : dead)
 		{
-			node->removeFromParent();
+			removeChild(*node);
 		}
 	}
 
